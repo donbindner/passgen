@@ -1,0 +1,84 @@
+.TH PASSGEN 0.3 "2001 Oct 16"
+.SH NAME
+passgen \- generates random password candidates
+.SH SYNOPSIS
+.B passgen
+.RB [OPTIONS] 
+.SH DESCRIPTION
+Passgen generates random passwords that contain a required amount
+of entropy.  By default it generates 48 bit passwords containing
+letters with approximately the same distribution as English, with
+some uppercase, digits, and symbols mixed in.
+.SH OPTIONS
+.TP
+-b <bits>
+Specifies the minimum number of bits that each password should
+contain.  Passgen will increase the length of the password to
+achieve the specified amount of entropy.  Defaults to 48 bits.
+.TP
+-c <count>
+The number of passwords to generate.  Defaults to 1.
+.TP
+-d<weight>
+Specifies that passwords should include digits.  The weight specifies
+how probable digits should be relative to other kinds of characters in
+the passwords.
+.TP
+-e
+Specifies the default English-like probability distribution.  This option
+can be used to ignore a custom distribution in the user's ~/.passgen file.
+.TP
+-l<weight>
+Specifies that passwords should include lower case letters.  The weight
+specifies how probable lower case letters should be relative to other kinds of
+characters in the passwords.
+.TP
+-p
+Paranoid mode.  Passgen will read from /dev/random instead of /dev/urandom.
+This will block if no random data is available.
+.TP
+-q
+Quiet.  This suppresses the entropy report.
+.TP
+-s<weight>
+Specifies that passwords should include symbols.  The weight
+specifies how probable symbols should be relative to other kinds of
+characters in the passwords.
+.TP
+-u<weight>
+Specifies that passwords should include upper case letters.  The weight
+specifies how probable upper case letters should be relative to other kinds of
+characters in the passwords.
+.TP
+.SH EXAMPLES
+.TP
+.B passgen
+Generates a 48 bit password from the default character probabilities.
+.TP
+.B passgen -b56 -l3 -d1
+Generates a 56 bit password of lower case letters and digits.  Letters
+will occur with higher probability than digits because of the higher
+weight.
+.SH FILES
+.TP
+~/.passgen
+This file may contain a custom set of weights.  Each line should contain a
+symbol followed by a colon (:) and then the weight of that symbol (essentially
+the probability with which it should occur).  For example "a: 75".  Ranges are
+also allowed, as in "A-Z: 100".
+.TP
+/dev/urandom or /dev/random
+Random sources.
+.SH SEE ALSO
+pwgen(1)
+.SH AUTHOR
+passgen was written by Donald J Bindner.
+.SH COPYRIGHT
+Copyrighted and released under GNU General Public License (GPL).
+.SH URL
+<URL:http://vh224401.truman.edu/~dbindner/linuxware/>
+.SH BUGS
+Please email 
+.B don@bindner.com
+with bug reports.
+

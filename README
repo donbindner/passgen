@@ -1,0 +1,11 @@
+Edit the Makefile.  By default the binary is installed to /usr/local/bin
+and the helpfile to /usr/local/share/man/man1.
+
+To compile:
+	make
+
+To install:
+	make install
+
+A sample ~/.passgen file (containing the default character weights used
+by passgen) is included as sample.passgen.
