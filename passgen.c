@@ -22,33 +22,7 @@ int freq[256];
 unsigned sum = 0;
 unsigned mask;
 
-void scramble( char *pass, FILE *f ) {
-/* randomly permute a string -- also accepts a random source for seeding random
- * number generator */
-    static int seeded=0;
-    unsigned int seed;
-    int i, j;
-    char c;
-
-    /* for permuting we'll just use regular pseudo randoms */
-    if( !seeded ) {
-	if( fread( &seed, sizeof( seed ), 1 , f ) == 0 ) {
-	    printf( "Could not read from random source.\n" );
-	    exit( 1 );
-	}
-	srandom( seed );
-	seeded = 1;
-    }
-
-    /* This is a classic shuffle (n.i.h. -- shuffles are tricky) */
-    for( i = strlen(pass)-1; i > 0; i-- ) {
-	j = (int)((float)random() / (RAND_MAX + 1.0) * (i+1.0));
-	/* swap */
-	c = pass[i];
-	pass[i] = pass[j];
-	pass[j] = c;
-    }
-}
+FILE *randf;
 
 unsigned generate_mask( int arg ) {
     unsigned i = 32768;
@@ -116,6 +90,8 @@ void init_addsymbol( int weight ) {
     assert( weight >= 0 && weight < 32768 );
     
     /* symbol */
+    freq['~'] += weight; sum += weight;
+    freq['`'] += weight; sum += weight;
     freq['!'] += weight; sum += weight;
     freq['@'] += weight; sum += weight;
     freq['#'] += weight; sum += weight;
@@ -123,15 +99,29 @@ void init_addsymbol( int weight ) {
     freq['%'] += weight; sum += weight;
     freq['^'] += weight; sum += weight;
     freq['&'] += weight; sum += weight;
-    freq['+'] += weight; sum += weight;
-    freq['-'] += weight; sum += weight;
     freq['*'] += weight; sum += weight;
-    freq['/'] += weight; sum += weight;
+    freq['('] += weight; sum += weight;
+    freq[')'] += weight; sum += weight;
+    freq['-'] += weight; sum += weight;
+    freq['_'] += weight; sum += weight;
     freq['='] += weight; sum += weight;
+    freq['+'] += weight; sum += weight;
+    freq['['] += weight; sum += weight;
+    freq['{'] += weight; sum += weight;
+    freq[']'] += weight; sum += weight;
+    freq['}'] += weight; sum += weight;
+    freq['\\'] += weight; sum += weight;
     freq['|'] += weight; sum += weight;
-    freq['.'] += weight; sum += weight;
-    freq[','] += weight; sum += weight;
+    freq[';'] += weight; sum += weight;
     freq[':'] += weight; sum += weight;
+    freq['\''] += weight; sum += weight;
+    freq['"'] += weight; sum += weight;
+    freq[','] += weight; sum += weight;
+    freq['<'] += weight; sum += weight;
+    freq['.'] += weight; sum += weight;
+    freq['>'] += weight; sum += weight;
+    freq['/'] += weight; sum += weight;
+    freq['?'] += weight; sum += weight;
 
     mask = generate_mask( sum-1 );
 }
@@ -195,15 +185,42 @@ void print_help( void ) {
     printf( "Version %s by Donald J. Bindner\n", VERSION );
 }
 
+char random_char() {
+    int i;
+    unsigned ran, count;
+
+    while( 1 ) {
+	if( fread( &ran, sizeof( ran ), 1 , randf ) == 0 ) {
+	    printf( "Could not read from random source.\n" );
+	    exit( 1 );
+	}
+
+	/* mod into our set (works right because mask is 2^k - 1) */
+	ran &= mask;
+
+	count = 0;
+	for( i = 0; i < 256; i++ ) {
+	    count += freq[i];
+	    if( count > ran ) {
+		return (char)i;
+	    }
+	}
+    }
+}
+
+
 int main( int argc, char *argv[] ) {
     char config_name[256];
     char line[256];
+    int count;
     int lo, hi, fr;
     FILE *f;
     char *rand_fname = "/dev/urandom";
     int target = 48;	/* number of bits we want to generate */
     float bits = 0.0;	/* how many bits we have made so far */
-    unsigned ran, count;
+    int set_size, base_length;
+    long int seed;
+    float size_bits;
     int opt;
     int i, l, n, num_pass=1;
     int english_flag=1, quiet_flag=0;
@@ -319,11 +336,15 @@ int main( int argc, char *argv[] ) {
     }
     
     /* Let's initialize our probabilities--either from options or
-     * or ~/.passgen or english-like defaults that author prefers */
+     * or ~/.passgen (above) or english-like defaults that author prefers */
     if( english_flag ) {
 	init_english();
 	init_adddigit( 200 );
-	init_addsymbol( 75 );
+	init_addsymbol( 50 );
+
+	/* Eliminate easily confused characters */
+	freq['I'] = freq['1'] = freq['l'] = 0;
+	freq['0'] = freq['O'] = 0;
     } else if( lower_weight || upper_weight || digit_weight || symbol_weight ) {
 	init_empty();
 	init_addlower( lower_weight );
@@ -332,39 +353,50 @@ int main( int argc, char *argv[] ) {
 	init_addsymbol( symbol_weight );
     }
 
+    /* compute base password length from set size */
+    set_size = 0;
+    for( i = 0; i < 256; i++ ) {
+	if( freq[i] ) set_size++;
+    }
+    size_bits = lg( (float)set_size );
+    base_length = target/size_bits+0.5;
+
     /* open random source for reading */
-    if( NULL == (f = fopen( rand_fname, "r" ))) {
+    if( NULL == (randf = fopen( rand_fname, "r" ))) {
 	printf( "Could not open %s\n", rand_fname );
 	exit( 1 );
     };
+
+    /* seed random number generator -- used only for making choices*/
+    /* not for generating new characters */
+    if( fread( &seed, sizeof( seed ), 1 , randf ) == 0 ) {
+	printf( "Could not read from random source.\n" );
+	exit( 1 );
+    }
+    srand48( seed );
 
     for( n = 0; n < num_pass; n++ ) {
 	bits = 0.0;
 	l = 0;
 
+	/* fill up password of base_length characters */
+	assert( base_length < PASS_LEN );
+	for( l = 0; l < base_length; l++ ) {
+	    i = random_char();
+	    password[l] = i;
+	    bits += -lg((float)freq[i] / (float)sum);
+	}
+
 	/* keep outputting characters until we have enough entropy */
-	while( bits < target && l < PASS_LEN ) {
-	    if( fread( &ran, sizeof( ran ), 1 , f ) == 0 ) {
-		printf( "Could not read from %s\n", rand_fname );
-		exit( 1 );
-	    }
+	while( l < PASS_LEN ) {
+	    if( drand48() < pow( 2.0, bits-target)) break;
 
-	    /* mod into our set (works right because mask is 2^k - 1) */
-	    ran &= mask;
-
-	    count = 0;
-	    for( i = 0; i < 256; i++ ) {
-		count += freq[i];
-		if( count > ran ) {
-		    password[l++] = (char)i;
-		    bits += -lg((float)freq[i] / (float)sum);
-		    break;
-		}
-	    }
+	    i = random_char();
+	    password[l] = i;
+	    bits += -lg((float)freq[i] / (float)sum);
+	    l++;
 	}
 	password[l] = '\0';
-
-	scramble( password, f );
 
 	if( quiet_flag ) {
 	    printf( "%s\n", password );
