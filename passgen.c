@@ -74,11 +74,12 @@ void init_addupper( int weight ) {
 }
 
 void init_adddigit( int weight ) {
+/* add digits -- excluding 0 and 1 which are easily confused with letters */
     int i;
 
     assert( weight >= 0 && weight < 32768 );
 
-    for( i = '0'; i <= '9'; i++ ) {
+    for( i = '2'; i <= '9'; i++ ) {
 	freq[i] += weight;
 	sum += weight;
     }
@@ -132,6 +133,7 @@ void init_english( void ) {
     init_empty();
 
     /* upper and lower in English-like frequency */
+    /* omit easily confused letters l, I, O      */
     freq['a'] =  856;  freq['A'] = freq['a']/3;
     freq['b'] =  139;  freq['B'] = freq['b']/3;
     freq['c'] =  279;  freq['C'] = freq['c']/3;
@@ -140,13 +142,13 @@ void init_english( void ) {
     freq['f'] =  289;  freq['F'] = freq['f']/3;
     freq['g'] =  199;  freq['G'] = freq['g']/3;
     freq['h'] =  528;  freq['H'] = freq['h']/3;
-    freq['i'] =  627;  freq['I'] = freq['i']/3;
+    freq['i'] =  627;  freq['I'] = 0;
     freq['j'] =   13;  freq['J'] = freq['j']/3;
     freq['k'] =   42;  freq['K'] = freq['k']/3;
-    freq['l'] =  339;  freq['L'] = freq['l']/3;
+    freq['l'] =    0;  freq['L'] = 113;
     freq['m'] =  249;  freq['M'] = freq['m']/3;
     freq['n'] =  707;  freq['N'] = freq['n']/3;
-    freq['o'] =  797;  freq['O'] = freq['o']/3;
+    freq['o'] =  797;  freq['O'] = 0;
     freq['p'] =  199;  freq['P'] = freq['p']/3;
     freq['q'] =   12;  freq['Q'] = freq['r']/3;
     freq['r'] =  677;  freq['R'] = freq['r']/3;
@@ -341,10 +343,6 @@ int main( int argc, char *argv[] ) {
 	init_english();
 	init_adddigit( 200 );
 	init_addsymbol( 50 );
-
-	/* Eliminate easily confused characters */
-	freq['I'] = freq['1'] = freq['l'] = 0;
-	freq['0'] = freq['O'] = 0;
     } else if( lower_weight || upper_weight || digit_weight || symbol_weight ) {
 	init_empty();
 	init_addlower( lower_weight );
@@ -359,7 +357,7 @@ int main( int argc, char *argv[] ) {
 	if( freq[i] ) set_size++;
     }
     size_bits = lg( (float)set_size );
-    base_length = target/size_bits+0.5;
+    base_length = target/size_bits;
 
     /* open random source for reading */
     if( NULL == (randf = fopen( rand_fname, "r" ))) {
