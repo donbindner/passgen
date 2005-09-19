@@ -11,7 +11,7 @@
 #include <math.h>
 #include <unistd.h>
 
-#define VERSION "0.3"
+#define VERSION "0.4"
 
 extern char *optarg;
 
